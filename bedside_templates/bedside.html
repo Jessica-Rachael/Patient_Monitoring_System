@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bedside Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bedside">
+  <header class="topbar device-bar">
+    <span class="brand">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#fff"/><path d="M4 18h6l3-9 5 15 3-6h7" stroke="#0A6F6B" stroke-width="2.5" fill="none" stroke-linejoin="round"/></svg>
+      Bedside Monitor <small>device side, sends readings to the central server</small>
+    </span>
+    <div class="right"><span class="clock" id="clock">--:--:--</span></div>
+  </header>
+
+  <main class="page">
+    <section class="panel">
+      <h2>Connect a monitor to a patient</h2>
+      <p class="muted small">Use the Server IP, Device ID and Device key shown on the patient's page on the hospital website.</p>
+      <form id="connect" class="form-grid five">
+        <label class="field"><span>Server IP address</span><input name="host" placeholder="e.g. 192.168.1.20 or 127.0.0.1" required></label>
+        <label class="field"><span>Port</span><input name="port" type="number" value="{{ default_port }}" required></label>
+        <label class="field"><span>Device ID</span><input name="device_id" placeholder="DEV-0001" required></label>
+        <label class="field"><span>Device key</span><input name="key" placeholder="32-character key" required></label>
+        <label class="field"><span>Send every (seconds)</span><input name="interval" type="number" step="0.5" min="0.5" value="1" required></label>
+        <div class="connect-actions"><button class="btn primary" type="submit">Connect</button></div>
+      </form>
+      <div class="error" id="connect-error" hidden></div>
+    </section>
+
+    <div id="monitors"></div>
+    <p class="empty" id="none">No monitor connected yet.</p>
+  </main>
+
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script>
+const PLAUSIBLE = {{ plausible | tojson }};
+const FIELDS = [
+  ["heart_rate", "Heart rate", "bpm", 1], ["spo2", "SpO2", "%", 1], ["temperature", "Temperature", "°C", 0.1],
+  ["resp_rate", "Respiration", "/min", 1], ["bp_sys", "Systolic BP", "mmHg", 1], ["bp_dia", "Diastolic BP", "mmHg", 1],
+];
+const cards = {};
+
+async function call(url, method, body) {
+  const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Request failed");
+  return j;
+}
+
+document.getElementById("connect").addEventListener("submit", async e => {
+  e.preventDefault();
+  const box = document.getElementById("connect-error");
+  box.hidden = true;
+  try {
+    await call("/api/monitors", "POST", Object.fromEntries(new FormData(e.target)));
+    e.target.device_id.value = ""; e.target.key.value = "";
+    poll();
+  } catch (err) { box.textContent = err.message; box.hidden = false; }
+});
+
+function cardHTML(m) {
+  const id = m.device_id;
+  return `
+  <section class="panel monitor" id="m-${id}">
+    <div class="panel-head">
+      <div><h2>${esc(id)}</h2><div class="small muted" data-r="conn"></div></div>
+      <span class="pill" data-r="state"></span>
+    </div>
+    <div class="monitor-grid">
+      <div>
+        <h3>Vital signs to send</h3>
+        <form class="vital-inputs" data-form="${id}">
+          ${FIELDS.map(([k, label, unit, step]) => `
+            <label class="field"><span>${label} <em>${unit}</em></span>
+              <input name="${k}" type="number" step="${step}" min="${PLAUSIBLE[k][0]}" max="${PLAUSIBLE[k][1]}" placeholder="${PLAUSIBLE[k][0]} to ${PLAUSIBLE[k][1]}" required></label>`).join("")}
+          <div class="apply-row">
+            <button class="btn primary" type="submit">Apply values</button>
+            <label class="check"><input type="checkbox" data-var checked> Natural variation</label>
+          </div>
+        </form>
+        <div class="error" data-r="err" hidden></div>
+        <div class="apply-row">
+          <button class="btn primary big" data-tx>Start transmitting</button>
+          <button class="btn" data-remove>Disconnect</button>
+        </div>
+        <p class="small muted">Change any value and press Apply values while transmitting. The next packet carries the new numbers.</p>
+      </div>
+      <div class="wire">
+        <div class="counters small" data-r="counters"></div>
+        <h3>Last packet sent</h3><pre data-r="packet">Nothing sent yet</pre>
+        <h3>Server reply (ACK)</h3><pre data-r="ack">--</pre>
+        <h3>Activity</h3><pre class="log-pre" data-r="log"></pre>
+      </div>
+    </div>
+  </section>`;
+}
+
+function update(m) {
+  const el = document.getElementById(`m-${m.device_id}`);
+  const q = r => el.querySelector(`[data-r="${r}"]`);
+  const st = m.state === "Connected" ? (m.transmitting ? "normal" : "warning") : (m.state === "Error" ? "critical" : "offline");
+  q("state").className = `pill ${st}`;
+  q("state").textContent = m.state === "Connected" ? (m.transmitting ? "Transmitting" : "Connected, paused") : m.state;
+  q("conn").textContent = `${m.local || "--"} to ${m.host}:${m.port}${m.tls ? `, ${m.tls}` : ""}`;
+  q("counters").textContent = `Sent ${m.sent}, accepted ${m.acked}, rejected ${m.rejected}`;
+  q("packet").textContent = m.last_packet ? JSON.stringify(m.last_packet, null, 2) : "Nothing sent yet";
+  q("ack").textContent = m.last_ack ? JSON.stringify(m.last_ack, null, 2) : "--";
+  q("log").textContent = m.log.join("\n");
+  const err = q("err");
+  err.hidden = !m.error; err.textContent = m.error || "";
+  el.querySelector("[data-tx]").textContent = m.transmitting ? "Pause transmitting" : "Start transmitting";
+  el.querySelector("[data-var]").checked = m.variation;
+  const form = el.querySelector("form");
+  if (m.values && !form.dataset.filled) {                     // fill once, never overwrite typing
+    FIELDS.forEach(([k]) => form[k].value = m.values[k]);
+    form.dataset.filled = "1";
+  }
+}
+
+async function poll() {
+  const list = await (await fetch("/api/monitors")).json();
+  const root = document.getElementById("monitors");
+  const ids = new Set(list.map(m => m.device_id));
+  Object.keys(cards).forEach(id => { if (!ids.has(id)) { document.getElementById(`m-${id}`).remove(); delete cards[id]; } });
+  list.forEach(m => {
+    if (!cards[m.device_id]) { root.insertAdjacentHTML("beforeend", cardHTML(m)); cards[m.device_id] = true; }
+    update(m);
+  });
+  document.getElementById("none").hidden = list.length > 0;
+}
+
+document.addEventListener("submit", async e => {
+  const dev = e.target.dataset.form;
+  if (!dev) return;
+  e.preventDefault();
+  const err = document.querySelector(`#m-${dev} [data-r="err"]`);
+  try {
+    await call(`/api/monitors/${dev}`, "PUT", { values: Object.fromEntries(new FormData(e.target)) });
+    e.target.dataset.filled = "1";
+    err.hidden = true;
+  } catch (x) { err.textContent = x.message; err.hidden = false; }
+});
+
+document.addEventListener("click", async e => {
+  const card = e.target.closest(".monitor");
+  if (!card) return;
+  const dev = card.id.slice(2);
+  const err = card.querySelector('[data-r="err"]');
+  try {
+    if (e.target.matches("[data-tx]")) {
+      await call(`/api/monitors/${dev}`, "PUT", { transmitting: e.target.textContent.startsWith("Start") });
+    } else if (e.target.matches("[data-var]")) {
+      await call(`/api/monitors/${dev}`, "PUT", { variation: e.target.checked });
+    } else if (e.target.matches("[data-remove]")) {
+      await call(`/api/monitors/${dev}`, "DELETE");
+    } else return;
+    err.hidden = true; poll();
+  } catch (x) { err.textContent = x.message; err.hidden = false; }
+});
+
+poll();
+setInterval(poll, 1000);
+</script>
+</body>
+</html>
