@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Network - Central Station{% endblock %}
+{% block content %}
+  <h1>Network activity</h1>
+  <p class="lede">How each reading travels from the bedside to this screen, and exactly how the server checked it.</p>
+
+  <div class="panel" style="margin-top:18px">
+    <div class="flow">
+      <div class="node"><strong>Bedside Monitor app</strong><span>staff enter vital signs</span></div>
+      <div class="link">TCP port {{ device_port }}<br>TLS encrypted, HMAC signed</div>
+      <div class="node"><strong>Central server</strong><span>{{ server_ip }}, checks and stores</span></div>
+      <div class="link">HTTPS port 8443<br>login required</div>
+      <div class="node"><strong>This website</strong><span>any browser on the LAN</span></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="value" id="n-accepted">0</div><div class="label">Packets accepted</div></div>
+    <div class="stat bad"><div class="value" id="n-rejected">0</div><div class="label">Packets blocked</div></div>
+    <div class="stat"><div class="value" id="n-accept-rate">--</div><div class="label">Acceptance rate</div></div>
+    <div class="stat"><div class="value" id="n-bytes">0</div><div class="label">Data received</div></div>
+    <div class="stat"><div class="value" id="n-conns">0</div><div class="label">Connections so far</div></div>
+    <div class="stat"><div class="value" id="n-uptime">--</div><div class="label">Server uptime</div></div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Packet inspector</h2><span class="muted small">Latest packets, newest first. Select one to see its contents.</span></div>
+    <div id="inspector"></div>
+  </section>
+
+  <div class="net-grid" style="margin-top:18px">
+    <div>
+      <div class="panel">
+        <h2>Monitors</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Device</th><th>Patient</th><th>Source IP : port</th><th>Packets</th><th>Latency</th><th>Last seen</th><th>State</th></tr></thead>
+          <tbody id="conn-rows"></tbody>
+        </table></div>
+      </div>
+      <div class="panel">
+        <h2>Connection log</h2>
+        <div class="table-wrap"><table class="log">
+          <thead><tr><th>Time</th><th>Event</th><th>Device</th><th>Source</th><th>Detail</th></tr></thead>
+          <tbody id="log-rows"></tbody>
+        </table></div>
+      </div>
+    </div>
+    <aside class="panel"><h2>Why packets were blocked</h2><ul class="reasons" id="reasons"></ul></aside>
+  </div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/network.js') }}"></script>{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Staff - Central Station{% endblock %}
+{% block content %}
+  <h1>Staff accounts</h1>
+  <p class="lede">Doctors can register and discharge patients. Nurses can watch the ward and acknowledge alerts.</p>
+
+  <div class="two-col">
+    <section class="panel">
+      <h2>Add a doctor or nurse</h2>
+      <form method="POST" class="form">
+        <div class="form-grid">
+          <label class="field"><span>Full name</span><input name="full_name" value="{{ request.form.full_name }}" required></label>
+          <label class="field"><span>Role</span>
+            <select name="role"><option value="doctor">Doctor</option><option value="nurse" {{ 'selected' if request.form.role == 'nurse' }}>Nurse</option></select></label>
+          <label class="field"><span>Username</span><input name="username" value="{{ request.form.username }}" required></label>
+          <span></span>
+          <label class="field"><span>Password</span><input name="password" type="password" required minlength="6"></label>
+          <label class="field"><span>Confirm password</span><input name="confirm" type="password" required></label>
+        </div>
+        {% for e in errors %}<div class="error">{{ e }}</div>{% endfor %}
+        <button class="btn primary" type="submit">Create account</button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Current staff</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for s in staff %}
+          <tr><td><strong>{{ s.full_name }}</strong></td><td>{{ s.username }}</td><td><span class="tag">{{ s.role }}</span></td>
+          <td>{{ s.created_at[:10] }}</td>
+          <td>{% if s.role != 'admin' %}<form method="POST" action="{{ url_for('staff_delete', user_id=s.id) }}" onsubmit="return confirm('Remove {{ s.full_name }}?')"><button class="btn small-btn">Remove</button></form>{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+  </div>
+{% endblock %}

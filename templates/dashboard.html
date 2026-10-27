@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Ward overview - Central Station{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div>
+      <h1>Ward overview</h1>
+      <p class="lede">Live readings arriving from bedside monitors. Select a bed to see details.</p>
+    </div>
+    {% if role in ['admin', 'doctor'] %}<a class="btn primary" href="{{ url_for('patient_new') }}">Register patient</a>{% endif %}
+  </div>
+
+  <div class="summary" aria-live="polite">
+    <div class="item"><span class="count" id="s-online">0/0</span> monitors sending</div>
+    <div class="item"><span class="count crit" id="s-critical">0</span> critical</div>
+    <div class="item"><span class="count warn" id="s-warning">0</span> need attention</div>
+    <div class="item"><span class="count" id="s-alerts">0</span> open alerts</div>
+    <div class="secure">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <span id="conn-state">Connecting to server</span>
+    </div>
+  </div>
+
+  <div class="ward">
+    <section>
+      <div class="beds" id="beds" aria-label="Beds"></div>
+      <div class="panel empty-state" id="empty" hidden>
+        <h2>No patients admitted yet</h2>
+        <p class="muted">Register a patient first. The website gives you a Device ID and Device Key. Enter them in the Bedside Monitor app (<code>python bedside_monitor.py</code>, then open http://localhost:{{ bedside_port }}) together with the patient's vital signs, and the readings appear here.</p>
+        {% if role in ['admin', 'doctor'] %}<a class="btn primary" href="{{ url_for('patient_new') }}">Register patient</a>{% endif %}
+      </div>
+    </section>
+    <aside class="panel">
+      <div class="panel-head"><h2>Alerts</h2><span class="muted small">Newest first</span></div>
+      <ul class="alerts" id="alerts"></ul>
+    </aside>
+  </div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>{% endblock %}

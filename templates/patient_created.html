@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Patient registered - Central Station{% endblock %}
+{% block content %}
+  <h1>{{ p.full_name }} is registered</h1>
+  <p class="lede">Patient ID {{ p.patient_code }}, {{ p.ward }} ward, bed {{ p.bed }}. Give the patient their login, and set up the bedside monitor with the device details.</p>
+
+  <div class="two-col" style="margin-top:18px">
+    {% include "_device_card.html" %}
+    <div class="panel">
+      <h2>Patient login</h2>
+      <dl class="facts"><dt>Username</dt><dd>{{ username }}</dd><dt>Password</dt><dd>the one you entered</dd></dl>
+      <h2 style="margin-top:22px">Next steps</h2>
+      <ol class="steps">
+        <li>On the bedside laptop, run <code>python bedside_monitor.py</code> and open http://localhost:{{ bedside_port }}.</li>
+        <li>Enter the server IP, Device ID and Device key shown here, then connect.</li>
+        <li>Type the patient's vital signs and press Start transmitting.</li>
+        <li>Watch the readings arrive on the ward screen.</li>
+      </ol>
+      <div class="actions-row">
+        <a class="btn primary" href="{{ url_for('patient_detail', device_id=p.device_id) }}">Open patient</a>
+        <a class="btn" href="{{ url_for('patient_new') }}">Register another</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/secret.js') }}"></script>{% endblock %}

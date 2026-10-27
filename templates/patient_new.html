@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Register patient - Central Station{% endblock %}
+{% block content %}
+  <a class="back" href="{{ url_for('patients') }}">Back to patients</a>
+  <h1>Register a patient</h1>
+  <p class="lede">Registering creates the patient record, a login for the patient, and a secure device identity for their bedside monitor.</p>
+
+  {% if errors %}<div class="error">{% for e in errors %}<div>{{ e }}</div>{% endfor %}</div>{% endif %}
+
+  <form method="POST" class="form">
+    <section class="panel">
+      <h2>Patient details</h2>
+      <div class="form-grid three">
+        <label class="field wide"><span>Full name</span><input name="full_name" value="{{ form.full_name }}" required></label>
+        <label class="field"><span>Age</span><input name="age" type="number" min="1" max="129" value="{{ form.age }}" required></label>
+        <label class="field"><span>Gender</span><select name="gender">
+          {% for g in ['Female', 'Male', 'Other'] %}<option {{ 'selected' if form.gender == g }}>{{ g }}</option>{% endfor %}</select></label>
+        <label class="field"><span>Phone</span><input name="phone" value="{{ form.phone }}"></label>
+        <label class="field"><span>Emergency contact</span><input name="emergency_contact" value="{{ form.emergency_contact }}" placeholder="Name and phone"></label>
+        <label class="field"><span>Ward</span><input name="ward" value="{{ form.ward }}" placeholder="e.g. ICU" required></label>
+        <label class="field"><span>Bed number</span><input name="bed" value="{{ form.bed }}" placeholder="e.g. 4" required></label>
+        <label class="field wide"><span>Diagnosis or reason for admission</span><input name="diagnosis" value="{{ form.diagnosis }}"></label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Alert limits</h2>
+      <p class="muted small">Pre-filled with standard adult ranges. Change them to suit this patient. A reading outside these limits raises an alert on the ward screen.</p>
+      <div class="limits">
+        {% for k, (lo, hi) in defaults.items() %}
+        <div class="limit">
+          <strong>{{ labels[k] }}</strong> <span class="muted small">{{ units[k] }}</span>
+          <div class="limit-inputs">
+            <label><span>Low</span><input name="{{ k }}_low" type="number" step="any" value="{{ form.get(k ~ '_low', lo) }}" required></label>
+            <label><span>High</span><input name="{{ k }}_high" type="number" step="any" value="{{ form.get(k ~ '_high', hi) }}" required></label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Patient login</h2>
+      <p class="muted small">The patient signs in with these to see their own readings.</p>
+      <div class="form-grid three">
+        <label class="field"><span>Username</span><input name="username" value="{{ form.username }}" required></label>
+        <label class="field"><span>Password</span><input name="password" type="password" minlength="6" required></label>
+        <label class="field"><span>Confirm password</span><input name="confirm" type="password" required></label>
+      </div>
+    </section>
+
+    <button class="btn primary big" type="submit">Register patient</button>
+  </form>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ p.full_name }} - Central Station{% endblock %}
+{% block body_attrs %}data-device="{{ p.device_id }}"{% endblock %}
+{% block content %}
+  {% if not portal %}<a class="back" href="{{ url_for('patients') }}">Back to patients</a>{% endif %}
+
+  <div class="patient-head">
+    <div>
+      <div class="bed-id">{{ p.patient_code }}, {{ p.device_id }}</div>
+      <h1>{% if portal %}Hello, {{ p.full_name }}{% else %}{{ p.full_name }}{% endif %}</h1>
+      <p class="lede">{{ p.age }} years, {{ p.gender }}. {{ p.ward }} ward, bed {{ p.bed }}. Doctor: {{ p.doctor }}</p>
+    </div>
+    <span class="pill offline" id="status-pill">No signal</span>
+    <div class="actions"><a class="btn" href="{{ url_for('api_export', device_id=p.device_id) }}">Download readings (CSV)</a></div>
+  </div>
+
+  <div class="paper tall"><span class="lead">II</span><canvas id="ecg"></canvas></div>
+
+  <div class="big-vitals">
+    {% for k in labels %}
+    <div class="vital" id="v-{{ k }}">
+      <div class="label">{{ labels[k] }}</div>
+      <div class="value"><span class="n">--</span><span class="unit">{{ units[k] }}</span></div>
+      <div class="range">Limits {{ '%g' % p.limits[k][0] }} to {{ '%g' % p.limits[k][1] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="waiting" id="waiting">Waiting for the bedside monitor. Nothing has been received from {{ p.device_id }} yet.</p>
+
+  <div class="patient-grid">
+    <section>
+      <div class="trends">
+        <div class="trend"><div class="trend-head"><strong>Heart rate</strong><span class="muted small">bpm</span></div><canvas id="c-hr"></canvas></div>
+        <div class="trend"><div class="trend-head"><strong>Oxygen saturation</strong><span class="muted small">%</span></div><canvas id="c-spo2"></canvas></div>
+        <div class="trend"><div class="trend-head"><strong>Temperature</strong><span class="muted small">°C</span></div><canvas id="c-temp"></canvas></div>
+        <div class="trend"><div class="trend-head"><strong>Blood pressure</strong><span class="muted small">systolic red, diastolic grey</span></div><canvas id="c-bp"></canvas></div>
+      </div>
+
+      {% if not portal and role in ['admin', 'doctor'] %}
+      <form class="panel" style="margin-top:18px" method="POST" action="{{ url_for('patient_limits', device_id=p.device_id) }}">
+        <div class="panel-head"><h2>Alert limits</h2><button class="btn primary" type="submit">Save limits</button></div>
+        <div class="limits">
+          {% for k in labels %}
+          <div class="limit"><strong>{{ labels[k] }}</strong> <span class="muted small">{{ units[k] }}</span>
+            <div class="limit-inputs">
+              <label><span>Low</span><input name="{{ k }}_low" type="number" step="any" value="{{ '%g' % p.limits[k][0] }}"></label>
+              <label><span>High</span><input name="{{ k }}_high" type="number" step="any" value="{{ '%g' % p.limits[k][1] }}"></label>
+            </div></div>
+          {% endfor %}
+        </div>
+      </form>
+      {% endif %}
+    </section>
+
+    <aside>
+      <div class="panel">
+        <h2>How the latest reading arrived</h2>
+        <dl class="facts">
+          <dt>Link</dt><dd id="f-link">--</dd>
+          <dt>From</dt><dd id="f-ip">--</dd>
+          <dt>Encryption</dt><dd id="f-tls">--</dd>
+          <dt>Packets</dt><dd id="f-packets">0</dd>
+          <dt>Latency</dt><dd id="f-latency">--</dd>
+          <dt>Last reading</dt><dd id="f-seen">--</dd>
+        </dl>
+      </div>
+      {% if not portal %}
+        {% include "_device_card.html" %}
+        {% if role in ['admin', 'doctor'] %}
+        <form class="panel" method="POST" action="{{ url_for('patient_newkey', device_id=p.device_id) }}" onsubmit="return confirm('Issue a new key? The bedside monitor must reconnect with it.')">
+          <h2>Lost or leaked key?</h2>
+          <p class="muted small">Issue a new device key. The old one is rejected from now on.</p>
+          <button class="btn" type="submit">Issue new key</button>
+        </form>
+        {% endif %}
+        <div class="panel"><h2>Patient information</h2>
+          <dl class="facts"><dt>Phone</dt><dd>{{ p.phone or '--' }}</dd><dt>Emergency</dt><dd>{{ p.emergency_contact or '--' }}</dd>
+          <dt>Diagnosis</dt><dd>{{ p.diagnosis or '--' }}</dd><dt>Login</dt><dd>{{ username or '--' }}</dd><dt>Registered</dt><dd>{{ p.created_at[:10] }}</dd></dl></div>
+      {% endif %}
+      <div class="panel"><h2>Alert history</h2><ul class="alerts" id="alerts"></ul></div>
+    </aside>
+  </div>
+{% endblock %}
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/secret.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/patient.js') }}"></script>
+{% endblock %}

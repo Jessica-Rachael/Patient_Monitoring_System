@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Patients - Central Station{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <div><h1>Patients</h1><p class="lede">Everyone registered in the system, with the device assigned to them.</p></div>
+    {% if role in ['admin', 'doctor'] %}<a class="btn primary" href="{{ url_for('patient_new') }}">Register patient</a>{% endif %}
+  </div>
+
+  <section class="panel">
+    {% if patients %}
+    <div class="table-wrap"><table>
+      <thead><tr><th>Patient ID</th><th>Name</th><th>Age</th><th>Ward, bed</th><th>Doctor</th><th>Device ID</th><th>Signal</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for p in patients %}
+        <tr>
+          <td>{{ p.patient_code }}</td>
+          <td><strong>{% if p.status == 'admitted' %}<a href="{{ url_for('patient_detail', device_id=p.device_id) }}">{{ p.full_name }}</a>{% else %}{{ p.full_name }}{% endif %}</strong></td>
+          <td>{{ p.age }}</td><td>{{ p.ward }}, bed {{ p.bed }}</td><td>{{ p.doctor }}</td>
+          <td>{{ p.device_id }}</td>
+          <td><span class="pill offline" data-signal="{{ p.device_id }}" style="margin:0">--</span></td>
+          <td><span class="tag">{{ p.status }}</span></td>
+          <td>{% if role in ['admin', 'doctor'] %}
+            <form method="POST" action="{{ url_for('patient_discharge', device_id=p.device_id) }}"
+                  onsubmit="return confirm('{{ 'Discharge' if p.status == 'admitted' else 'Readmit' }} {{ p.full_name }}?')">
+              <button class="btn small-btn">{{ 'Discharge' if p.status == 'admitted' else 'Readmit' }}</button></form>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+      <p class="empty">No patients yet. Use Register patient to add the first one.</p>
+    {% endif %}
+  </section>
+{% endblock %}
+{% block scripts %}
+<script>
+async function signal() {
+  const d = await api("/api/snapshot");
+  d.devices.forEach(x => {
+    const el = document.querySelector(`[data-signal="${x.device_id}"]`);
+    if (el) { el.className = `pill ${x.online ? x.status : "offline"}`; el.textContent = x.online ? STATUS_TEXT[x.status] : "No signal"; }
+  });
+}
+signal(); setInterval(signal, 2000);
+</script>
+{% endblock %}

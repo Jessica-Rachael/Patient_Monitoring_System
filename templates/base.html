@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Central Station{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230A6F6B'/><path d='M4 18h6l3-9 5 15 3-6h7' stroke='%23fff' stroke-width='2.5' fill='none' stroke-linejoin='round'/></svg>">
+</head>
+<body {% block body_attrs %}{% endblock %}>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#0A6F6B"/><path d="M4 18h6l3-9 5 15 3-6h7" stroke="#fff" stroke-width="2.5" fill="none" stroke-linejoin="round"/></svg>
+      Central Station <small>Patient monitoring</small>
+    </a>
+    <nav class="nav" aria-label="Main">
+      {% if role == 'patient' %}
+        <a href="{{ url_for('portal') }}" class="{{ 'active' if page == 'me' }}">My health</a>
+      {% else %}
+        <a href="{{ url_for('home') }}" class="{{ 'active' if page == 'ward' }}">Ward</a>
+        <a href="{{ url_for('patients') }}" class="{{ 'active' if page == 'patients' }}">Patients</a>
+        <a href="{{ url_for('network') }}" class="{{ 'active' if page == 'network' }}">Network</a>
+        {% if role == 'admin' %}<a href="{{ url_for('staff') }}" class="{{ 'active' if page == 'staff' }}">Staff</a>{% endif %}
+      {% endif %}
+    </nav>
+    <div class="right">
+      <span class="clock" id="clock">--:--:--</span>
+      <span class="user">{{ me }} <span class="role">{{ role }}</span></span>
+      <a class="signout" href="{{ url_for('logout') }}">Sign out</a>
+    </div>
+  </header>
+
+  <main class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}" role="status">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,12 @@
+<div class="panel">
+  <h2>Bedside monitor setup</h2>
+  <p class="muted small">Enter these in the Bedside Monitor app (<code>python bedside_monitor.py</code>, then http://localhost:{{ bedside_port }}) to start sending this patient's readings.</p>
+  <dl class="facts">
+    <dt>Server IP</dt><dd>{{ server_ip }}</dd>
+    <dt>Port</dt><dd>{{ device_port }}</dd>
+    <dt>Device ID</dt><dd>{{ p.device_id }}</dd>
+    <dt>Device key</dt><dd><span class="secret" data-secret="{{ p.device_key }}">••••••••••••••••</span>
+      <button type="button" class="btn small-btn" onclick="toggleSecret(this)">Show</button>
+      <button type="button" class="btn small-btn" onclick="navigator.clipboard.writeText('{{ p.device_key }}'); this.textContent='Copied'">Copy</button></dd>
+  </dl>
+</div>

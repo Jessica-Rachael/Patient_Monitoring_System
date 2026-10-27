@@ -1,0 +1,19 @@
+{% set title = "Sign in" %}{% include "_auth_head.html" %}
+<body>
+<div class="login-body">
+  {% include "_auth_art.html" %}
+  <section class="login-form-wrap">
+    <form class="login-form" method="POST" action="{{ url_for('login') }}">
+      <h2>Sign in</h2>
+      <p class="lede">Staff and patients use the same page. Patients get their login from the doctor who registered them.</p>
+      {% with messages = get_flashed_messages() %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endwith %}
+      <label class="field"><span>Username</span><input name="username" autocomplete="username" required autofocus></label>
+      <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
+      {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+      <button class="btn primary" type="submit">Sign in</button>
+    </form>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script>new EcgStrip(document.getElementById("demo-ecg")).setRate(72);</script>
+</body></html>

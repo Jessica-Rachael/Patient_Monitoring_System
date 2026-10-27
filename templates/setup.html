@@ -1,0 +1,20 @@
+{% set title = "First-time setup" %}{% include "_auth_head.html" %}
+<body>
+<div class="login-body">
+  {% include "_auth_art.html" %}
+  <section class="login-form-wrap">
+    <form class="login-form" method="POST">
+      <h2>Create the administrator account</h2>
+      <p class="lede">The system is empty. This first account manages staff and patients.</p>
+      <label class="field"><span>Your full name</span><input name="full_name" value="{{ request.form.full_name }}" required autofocus></label>
+      <label class="field"><span>Username</span><input name="username" value="{{ request.form.username }}" autocomplete="username" required></label>
+      <label class="field"><span>Password</span><input name="password" type="password" autocomplete="new-password" required minlength="6"></label>
+      <label class="field"><span>Confirm password</span><input name="confirm" type="password" autocomplete="new-password" required></label>
+      {% for e in errors %}<div class="error" role="alert">{{ e }}</div>{% endfor %}
+      <button class="btn primary" type="submit">Create administrator</button>
+    </form>
+  </section>
+</div>
+<script src="{{ url_for('static', filename='js/common.js') }}"></script>
+<script>new EcgStrip(document.getElementById("demo-ecg")).setRate(72);</script>
+</body></html>
